@@ -6,7 +6,6 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     Write-Host "Please run this script as Administrator." -ForegroundColor Red
     Write-Host "Press Enter to exit..."
     Read-Host | Out-Null
-    Stop-Transcript
     exit
 }
 

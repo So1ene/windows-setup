@@ -109,7 +109,6 @@ Set-Content -Path $PROFILE -Value $ompConfig -Force
 # Verify profile file creation
 if (!(Test-Path $PROFILE)) {
     Write-Host "ERROR: Profile file was not created successfully!" -ForegroundColor Red
-    Stop-Transcript
     exit
 }
 
