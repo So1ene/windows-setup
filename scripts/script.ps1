@@ -30,20 +30,20 @@ if (Test-Path $terminalSettingsPath) {
 
   # Loop through all profiles and ensure proper GUIDs + font settings
   if ($settings.profiles -and $settings.profiles.list) {
-      foreach ($profile in $settings.profiles.list) {
+      foreach ($settingsprofile in $settings.profiles.list) {
           # Convert GUIDs to string if necessary
-          if ($profile.PSObject.Properties['guid'] -and $profile.guid -isnot [string]) {
-              $profile.guid = "$($profile.guid)"
+          if ($settingsprofile.PSObject.Properties['guid'] -and $settingsprofile.guid -isnot [string]) {
+              $settingsprofile.guid = "$($settingsprofile.guid)"
           }
 
           # Ensure 'font' exists in profile
-          if (-not $profile.PSObject.Properties['font']) {
-              $profile | Add-Member -MemberType NoteProperty -Name "font" -Value @{size = $desiredFontSize; face = $desiredFontFace}
+          if (-not $settingsprofile.PSObject.Properties['font']) {
+              $settingsprofile | Add-Member -MemberType NoteProperty -Name "font" -Value @{size = $desiredFontSize; face = $desiredFontFace}
           } else {
               # Only update if different
-              if ($profile.font.size -ne $desiredFontSize -or $profile.font.face -ne $desiredFontFace) {
-                  $profile.font.size = $desiredFontSize
-                  $profile.font.face = $desiredFontFace
+              if ($settingsprofile.font.size -ne $desiredFontSize -or $settingsprofile.font.face -ne $desiredFontFace) {
+                  $settingsprofile.font.size = $desiredFontSize
+                  $settingsprofile.font.face = $desiredFontFace
               }
           }
       }
@@ -224,7 +224,7 @@ gh auth login --hostname github.com --web
 gh config set git_protocol ssh
 
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-Start-Process -FilePath "wt" -ArgumentList "new-tab" -NoNewWindow -WorkingDirectory $HOME
+Start-Process -FilePath "wt.exe" -ArgumentList "new-tab" -NoNewWindow -WorkingDirectory $HOME -Verb Open
 Start-Sleep -Seconds 1
 $host.SetShouldExit(0)
 exit
