@@ -17,9 +17,14 @@ $terminalSettingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8w
 
 $desiredFontFace = "MesloLGLDZ Nerd Font"
 $desiredFontSize = 12
+$defaultWorkingDirectory = $env:DEFAULT_WORKING_DIRECTORY
+if (-not $defaultWorkingDirectory -or $defaultWorkingDirectory -eq "") {
+    $defaultWorkingDirectory = $HOME
+}
+
 if (Test-Path $terminalSettingsPath) {
   try {
-      # Read and parse JSON safely
+      $originalHash = (Get-FileHash -Algorithm SHA256 $terminalSettingsPath).Hash
       $settingsJson = Get-Content -Path $terminalSettingsPath -Raw -ErrorAction Stop
       $settings = $settingsJson | ConvertFrom-Json -Depth 100
   } catch {
@@ -28,64 +33,61 @@ if (Test-Path $terminalSettingsPath) {
       exit 1
   }
 
-  # Loop through all profiles and ensure proper GUIDs + font settings
-  if ($settings.profiles -and $settings.profiles.list) {
-      foreach ($settingsprofile in $settings.profiles.list) {
-          # Convert GUIDs to string if necessary
-          if ($settingsprofile.PSObject.Properties['guid'] -and $settingsprofile.guid -isnot [string]) {
-              $settingsprofile.guid = "$($settingsprofile.guid)"
-          }
+  if (-not $settings.PSObject.Properties['profiles']) {
+      $settings | Add-Member -MemberType NoteProperty -Name "profiles" -Value @{}
+  }
 
-          # Ensure 'font' exists in profile
-          if (-not $settingsprofile.PSObject.Properties['font']) {
-              $settingsprofile | Add-Member -MemberType NoteProperty -Name "font" -Value @{size = $desiredFontSize; face = $desiredFontFace}
-          } else {
-              # Only update if different
-              if ($settingsprofile.font.size -ne $desiredFontSize -or $settingsprofile.font.face -ne $desiredFontFace) {
-                  $settingsprofile.font.size = $desiredFontSize
-                  $settingsprofile.font.face = $desiredFontFace
-              }
-          }
-      }
+  if (-not $settings.profiles.PSObject.Properties['defaults']) {
+      $settings.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value @{}
+  }
 
-      # Set PowerShell 7 as the default profile
-      $powerShell7GUID = "{574e775e-4f2a-5b96-ac1e-a2962a402336}"
-      if ($settings.PSObject.Properties['defaultProfile'] -and $settings.defaultProfile -ne $powerShell7GUID) {
-          $settings.defaultProfile = $powerShell7GUID
-          Write-Host "✅ Windows Terminal default profile set to PowerShell 7" -ForegroundColor Green
-      }
-
-      # Validate JSON before saving
-      try {
-          $settings | ConvertTo-Json -Depth 100 | ConvertFrom-Json | Out-Null
-      } catch {
-          Write-Host "❌ ERROR: JSON validation failed! Skipping save." -ForegroundColor Red
-          exit 1
-      }
-
-      # Get original settings hash
-      $originalHash = (Get-FileHash -Algorithm SHA256 $terminalSettingsPath).Hash
-
-      # Convert back to JSON and properly format it
-      $updatedSettingsJson = $settings | ConvertTo-Json -Depth 100 | Out-String
-
-      # Compare before writing
-      $updatedHash = [System.Security.Cryptography.HashAlgorithm]::Create("SHA256").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($updatedSettingsJson)) -join ""
-
-      if ($originalHash -ne $updatedHash) {
-          $updatedSettingsJson | Set-Content -Path $terminalSettingsPath -Encoding UTF8
-          Write-Host "✅ Windows Terminal settings successfully updated." -ForegroundColor Green
-      } else {
-          Write-Host "⚠️ No changes detected. Skipping unnecessary write." -ForegroundColor Yellow
-      }
+  if (-not $settings.profiles.defaults.PSObject.Properties['font']) {
+      $settings.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value @{size = $desiredFontSize; face = $desiredFontFace}
   } else {
-      Write-Host "⚠️ No profiles found in Windows Terminal settings!" -ForegroundColor Yellow
+      if ($settings.profiles.defaults.font.size -ne $desiredFontSize -or $settings.profiles.defaults.font.face -ne $desiredFontFace) {
+          $settings.profiles.defaults.font.size = $desiredFontSize
+          $settings.profiles.defaults.font.face = $desiredFontFace
+      }
+  }
+
+  Write-Host "✅ Updated global default font: $desiredFontFace (Size: $desiredFontSize)" -ForegroundColor Green
+
+  if (-not $settings.profiles.defaults.PSObject.Properties['startingDirectory']) {
+      $settings.profiles.defaults | Add-Member -MemberType NoteProperty -Name "startingDirectory" -Value $defaultWorkingDirectory
+  } else {
+      if ($settings.profiles.defaults.startingDirectory -ne $defaultWorkingDirectory) {
+          $settings.profiles.defaults.startingDirectory = $defaultWorkingDirectory
+      }
+  }
+
+  Write-Host "✅ Updated global default starting directory to: $defaultWorkingDirectory" -ForegroundColor Green
+
+  $powerShell7GUID = "{574e775e-4f2a-5b96-ac1e-a2962a402336}"
+  if ($settings.PSObject.Properties['defaultProfile'] -and $settings.defaultProfile -ne $powerShell7GUID) {
+      $settings.defaultProfile = $powerShell7GUID
+      Write-Host "✅ Windows Terminal default profile set to PowerShell 7" -ForegroundColor Green
+  }
+
+  try {
+      $settings | ConvertTo-Json -Depth 100 | ConvertFrom-Json | Out-Null
+  } catch {
+      Write-Host "❌ ERROR: JSON validation failed! Skipping save." -ForegroundColor Red
+      exit 1
+  }
+
+  $updatedSettingsJson = $settings | ConvertTo-Json -Depth 100 | Out-String
+  $updatedHash = [System.Security.Cryptography.HashAlgorithm]::Create("SHA256").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($updatedSettingsJson)) -join ""
+
+  if ($originalHash -ne $updatedHash) {
+      $updatedSettingsJson | Set-Content -Path $terminalSettingsPath -Encoding UTF8
+      Write-Host "✅ Windows Terminal settings successfully updated." -ForegroundColor Green
+  } else {
+      Write-Host "⚠️ No changes detected. Skipping unnecessary write." -ForegroundColor Yellow
   }
 } else {
   Write-Host "❌ ERROR: Windows Terminal settings.json not found!" -ForegroundColor Red
 }
 
-# Ensure the PowerShell profile exists
 if (!(Test-Path $PROFILE)) {
   Write-Host "Creating PowerShell profile: $PROFILE" -ForegroundColor Green
   New-Item -ItemType File -Path $PROFILE -Force | Out-Null
@@ -105,8 +107,6 @@ function cat { Get-Content -Path $args[0] }
 Write-Host "Writing Oh-My-Posh configuration and functions to PowerShell profile..." -ForegroundColor Green
 Set-Content -Path $PROFILE -Value $ompConfig -Force
 
-
-# Verify profile file creation
 if (!(Test-Path $PROFILE)) {
     Write-Host "ERROR: Profile file was not created successfully!" -ForegroundColor Red
     exit
@@ -224,7 +224,6 @@ gh auth login --hostname github.com --web
 gh config set git_protocol ssh
 
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-Start-Process -FilePath "wt.exe" -ArgumentList "new-tab" -NoNewWindow -WorkingDirectory $HOME -Verb Open
-Start-Sleep -Seconds 1
+Start-Process "shell:AppsFolder\Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"
 $host.SetShouldExit(0)
 exit

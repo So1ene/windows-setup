@@ -1,5 +1,4 @@
 @echo off
-:: Request Administrator permissions
 net session >nul 2>&1
 if %errorLevel% NEQ 0 (
     echo Requesting Administrator permissions...
@@ -18,5 +17,5 @@ timeout /t 5 /nobreak >nul
 
 echo Starting PowerShell as Administrator and running script...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Start-Process pwsh -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\install.ps1\"' -Verb RunAs"
+    "Start-Process pwsh -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\install.ps1\"' -WorkingDirectory "$HOME" -Verb RunAs"
 exit /b 0
