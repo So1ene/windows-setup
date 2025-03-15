@@ -93,7 +93,7 @@ if (!(Test-Path $PROFILE)) {
   New-Item -ItemType File -Path $PROFILE -Force | Out-Null
 }
 
-$ompConfig = @"
+$ompConfig = @'
 # Load Oh-My-Posh theme
 oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/my-theme.omp.json" | Invoke-Expression
 
@@ -102,7 +102,7 @@ function touch { Set-Content -Path $args[0] -Value $null }
 
 # Function to read file contents (like 'cat' in Linux)
 function cat { Get-Content -Path $args[0] }
-"@
+'@
 
 Write-Host "Writing Oh-My-Posh configuration and functions to PowerShell profile..." -ForegroundColor Green
 Set-Content -Path $PROFILE -Value $ompConfig -Force
