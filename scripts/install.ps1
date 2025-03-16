@@ -16,5 +16,6 @@ foreach ($app in $apps) {
 
 Write-Host "🚀 Refreshing to apply updates..." -ForegroundColor Green
 Start-Sleep -Seconds 3
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 Start-Process -FilePath "pwsh" -ArgumentList "-NoExit", "-File", "`"$PSScriptRoot\script.ps1`"" -WorkingDirectory "$HOME"
 exit
