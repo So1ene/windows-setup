@@ -7,7 +7,7 @@ if %errorLevel% NEQ 0 (
 )
 
 echo Setting execution policy to allow scripts...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy Bypass -Scope Process -Force"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser"
 
 echo Installing the latest PowerShell...
 winget install --id Microsoft.Powershell --source winget --accept-source-agreements --accept-package-agreements
