@@ -14,78 +14,78 @@ Write-Host "Installing MesloLGS NF font using Oh My Posh..." -ForegroundColor Cy
 oh-my-posh font install Meslo
 
 $terminalSettingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
-
 $desiredFontFace = "MesloLGLDZ Nerd Font"
 $desiredFontSize = 12
+$defaultPowerShellGUID = "{c68db2a9-3cce-42b0-a414-2141435c8707}"
 $defaultWorkingDirectory = $env:DEFAULT_WORKING_DIRECTORY
 if (-not $defaultWorkingDirectory -or $defaultWorkingDirectory -eq "") {
     $defaultWorkingDirectory = $HOME
 }
 
 if (Test-Path $terminalSettingsPath) {
-  try {
-      $originalHash = (Get-FileHash -Algorithm SHA256 $terminalSettingsPath).Hash
-      $settingsJson = Get-Content -Path $terminalSettingsPath -Raw -ErrorAction Stop
-      $settings = $settingsJson | ConvertFrom-Json -Depth 100
-  } catch {
-      Write-Host "❌ ERROR: Failed to parse settings.json. It might be malformed." -ForegroundColor Red
-      Write-Host $_.Exception.Message -ForegroundColor Yellow
-      exit 1
-  }
+    try {
+        $originalHash = (Get-FileHash -Algorithm SHA256 $terminalSettingsPath).Hash
+        $settingsJson = Get-Content -Path $terminalSettingsPath -Raw -ErrorAction Stop
+        $settings = $settingsJson | ConvertFrom-Json -Depth 100
+    } catch {
+        Write-Host "❌ ERROR: Failed to parse settings.json. It might be malformed." -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Yellow
+        exit 1
+    }
 
-  if (-not $settings.PSObject.Properties['profiles']) {
-      $settings | Add-Member -MemberType NoteProperty -Name "profiles" -Value @{}
-  }
+    if (-not $settings.profiles -or -not $settings.profiles.list) {
+        Write-Host "⚠️ No profiles found in Windows Terminal settings!" -ForegroundColor Yellow
+        exit 1
+    }
 
-  if (-not $settings.profiles.PSObject.Properties['defaults']) {
-      $settings.profiles | Add-Member -MemberType NoteProperty -Name "defaults" -Value @{}
-  }
+    $existingProfile = $settings.profiles.list | Where-Object { $_.source -eq "Windows.Terminal.PowershellCore" -or $_.commandline -match "pwsh" }
 
-  if (-not $settings.profiles.defaults.PSObject.Properties['font']) {
-      $settings.profiles.defaults | Add-Member -MemberType NoteProperty -Name "font" -Value @{size = $desiredFontSize; face = $desiredFontFace}
-  } else {
-      if ($settings.profiles.defaults.font.size -ne $desiredFontSize -or $settings.profiles.defaults.font.face -ne $desiredFontFace) {
-          $settings.profiles.defaults.font.size = $desiredFontSize
-          $settings.profiles.defaults.font.face = $desiredFontFace
-      }
-  }
+    if ($existingProfile) {
+        $powerShellGUID = $existingProfile.guid
+        Write-Host "🔄 Found existing PowerShell profile. Reusing GUID: $powerShellGUID" -ForegroundColor Cyan
+        $settings.profiles.list = $settings.profiles.list | Where-Object { $_ -ne $existingProfile }
+        Write-Host "🗑️ Removed existing PowerShell profile." -ForegroundColor Yellow
+    } else {
+        $powerShellGUID = $defaultPowerShellGUID
+    }
 
-  Write-Host "✅ Updated global default font: $desiredFontFace (Size: $desiredFontSize)" -ForegroundColor Green
+    $newProfile = @{
+        guid = $powerShellGUID
+        name = "PowerShell"
+        commandline = "pwsh.exe -nologo"
+        hidden = $false
+        icon = "ms-appx:///ProfileIcons/pwsh.png"
+        font = @{
+            face = $desiredFontFace
+            size = $desiredFontSize
+        }
+        startingDirectory = $defaultWorkingDirectory
+        source = "Windows.Terminal.PowershellCore"
+    }
 
-  if (-not $settings.profiles.defaults.PSObject.Properties['startingDirectory']) {
-      $settings.profiles.defaults | Add-Member -MemberType NoteProperty -Name "startingDirectory" -Value $defaultWorkingDirectory
-  } else {
-      if ($settings.profiles.defaults.startingDirectory -ne $defaultWorkingDirectory) {
-          $settings.profiles.defaults.startingDirectory = $defaultWorkingDirectory
-      }
-  }
+    $settings.profiles.list += $newProfile
+    Write-Host "✅ New PowerShell profile created with GUID: $powerShellGUID" -ForegroundColor Green
+    $settings.defaultProfile = $powerShellGUID
+    Write-Host "✅ Windows Terminal default profile set to PowerShell" -ForegroundColor Green
 
-  Write-Host "✅ Updated global default starting directory to: $defaultWorkingDirectory" -ForegroundColor Green
+    try {
+        $settings | ConvertTo-Json -Depth 100 | ConvertFrom-Json | Out-Null
+    } catch {
+        Write-Host "❌ ERROR: JSON validation failed! Skipping save." -ForegroundColor Red
+        exit 1
+    }
 
-  $powerShell7GUID = "{574e775e-4f2a-5b96-ac1e-a2962a402336}"
-  if ($settings.PSObject.Properties['defaultProfile'] -and $settings.defaultProfile -ne $powerShell7GUID) {
-      $settings.defaultProfile = $powerShell7GUID
-      Write-Host "✅ Windows Terminal default profile set to PowerShell 7" -ForegroundColor Green
-  }
+    $updatedSettingsJson = $settings | ConvertTo-Json -Depth 100 | Out-String
+    $updatedHash = [System.Security.Cryptography.HashAlgorithm]::Create("SHA256").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($updatedSettingsJson)) -join ""
 
-  try {
-      $settings | ConvertTo-Json -Depth 100 | ConvertFrom-Json | Out-Null
-  } catch {
-      Write-Host "❌ ERROR: JSON validation failed! Skipping save." -ForegroundColor Red
-      exit 1
-  }
-
-  $updatedSettingsJson = $settings | ConvertTo-Json -Depth 100 | Out-String
-  $updatedHash = [System.Security.Cryptography.HashAlgorithm]::Create("SHA256").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($updatedSettingsJson)) -join ""
-
-  if ($originalHash -ne $updatedHash) {
-      $updatedSettingsJson | Set-Content -Path $terminalSettingsPath -Encoding UTF8
-      Write-Host "✅ Windows Terminal settings successfully updated." -ForegroundColor Green
-  } else {
-      Write-Host "⚠️ No changes detected. Skipping unnecessary write." -ForegroundColor Yellow
-  }
+    if ($originalHash -ne $updatedHash) {
+        $updatedSettingsJson | Set-Content -Path $terminalSettingsPath -Encoding UTF8
+        Write-Host "✅ Windows Terminal settings successfully updated." -ForegroundColor Green
+    } else {
+        Write-Host "⚠️ No changes detected. Skipping unnecessary write." -ForegroundColor Yellow
+    }
 } else {
-  Write-Host "❌ ERROR: Windows Terminal settings.json not found!" -ForegroundColor Red
+    Write-Host "❌ ERROR: Windows Terminal settings.json not found!" -ForegroundColor Red
 }
 
 if (!(Test-Path $PROFILE)) {
