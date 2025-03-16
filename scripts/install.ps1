@@ -7,15 +7,8 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     exit
 }
 
-function Test-AppInstalled {
-    param ($appId)
-    return $null -ne (winget list --id $appId | Select-String -Pattern $appId)
-}
-
-function Test-AppUpgrade {
-    param ($appId)
-    return $null -ne (winget upgrade --id $appId | Select-String -Pattern $appId)
-}
+Write-Host "🔄 Updating / installing applications..." -ForegroundColor Green
+winget upgrade --all --accept-source-agreements --accept-package-agreements
 
 $apps = @(
     "Microsoft.WindowsTerminal",
@@ -26,18 +19,11 @@ $apps = @(
 )
 
 foreach ($app in $apps) {
-    if (Test-AppUpgrade $app) {
-        Write-Host "⬆️ Upgrading $app..." -ForegroundColor Green
-        winget upgrade --id=$app --silent --accept-source-agreements --accept-package-agreements
-    } elseif (-not (Test-AppInstalled $app)) {
-        Write-Host "📦 Installing $app..." -ForegroundColor Green
-        winget install --id=$app --silent --accept-source-agreements --accept-package-agreements
-    } else {
-        Write-Host "✅ $app is up to date, skipping..." -ForegroundColor Yellow
-    }
+  Write-Host "📦 Installing $app..." -ForegroundColor Green
+  winget install --id=$app --accept-source-agreements --accept-package-agreements
 }
 
-Write-Host "🚀 Restarting script to apply updates..."
-Start-Sleep -Seconds 1
+Write-Host "🚀 Refreshing to apply updates..." -ForegroundColor Green
+Start-Sleep -Seconds 3
 Start-Process -FilePath "pwsh" -ArgumentList "-NoExit", "-File", "`"$PSScriptRoot\script.ps1`"" -WorkingDirectory "$HOME"
 exit
