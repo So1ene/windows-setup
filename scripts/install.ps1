@@ -1,12 +1,3 @@
-Set-ExecutionPolicy Bypass -Scope Process -Force
-
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "❌ Please run this script as Administrator." -ForegroundColor Red
-    Write-Host "Press Enter to exit..."
-    Read-Host | Out-Null
-    exit
-}
-
 Write-Host "🔄 Updating / installing applications..." -ForegroundColor Green
 winget upgrade --all --accept-source-agreements --accept-package-agreements
 
