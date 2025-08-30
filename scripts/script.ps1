@@ -24,6 +24,10 @@ if (-not $defaultWorkingDirectory -or $defaultWorkingDirectory -eq "") {
 
 if (Test-Path $terminalSettingsPath) {
     try {
+        $backupPath = "$terminalSettingsPath.backup"
+        Copy-Item $terminalSettingsPath $backupPath -Force
+        Write-Host "📋 Created backup at: $backupPath" -ForegroundColor Cyan
+        
         $originalHash = (Get-FileHash -Algorithm SHA256 $terminalSettingsPath).Hash
         $settingsJson = Get-Content -Path $terminalSettingsPath -Raw -ErrorAction Stop
         $settings = $settingsJson | ConvertFrom-Json -Depth 100
@@ -40,19 +44,21 @@ if (Test-Path $terminalSettingsPath) {
         exit 1
     }
 
-    $existingProfile = $settings.profiles.list | Where-Object { $_.source -eq "Windows.Terminal.PowershellCore" -or $_.commandline -match "pwsh" }
-
-    if ($existingProfile) {
-        $powerShellGUID = $existingProfile.guid
-        Write-Host "🔄 Found existing PowerShell profile. Reusing GUID: $powerShellGUID" -ForegroundColor Cyan
-        $settings.profiles.list = $settings.profiles.list | Where-Object { $_ -ne $existingProfile }
-        Write-Host "🗑️ Removed existing PowerShell profile." -ForegroundColor Yellow
-    } else {
-        $powerShellGUID = $defaultPowerShellGUID
+    $originalProfileCount = $settings.profiles.list.Count
+    $settings.profiles.list = $settings.profiles.list | Where-Object { 
+        $_.source -ne "Windows.Terminal.PowershellCore" -and 
+        $_.commandline -notmatch "pwsh" -and 
+        $_.name -ne "PowerShell"
     }
+    $removedCount = $originalProfileCount - $settings.profiles.list.Count
+    if ($removedCount -gt 0) {
+        Write-Host "🗑️ Removed $removedCount existing PowerShell profile(s)." -ForegroundColor Yellow
+    }
+    
+    $powerShellGUID = $defaultPowerShellGUID
 
     $newProfile = @{
-        guid = $powerShellGUID
+        guid = [string]$powerShellGUID
         name = "PowerShell"
         commandline = "pwsh.exe -nologo"
         hidden = $false
@@ -67,7 +73,7 @@ if (Test-Path $terminalSettingsPath) {
 
     $settings.profiles.list += $newProfile
     Write-Host "✅ New PowerShell profile created with GUID: $powerShellGUID" -ForegroundColor Green
-    $settings.defaultProfile = $powerShellGUID
+    $settings.defaultProfile = [string]$powerShellGUID
     Write-Host "✅ Windows Terminal default profile set to PowerShell" -ForegroundColor Green
 
     try {
@@ -79,6 +85,12 @@ if (Test-Path $terminalSettingsPath) {
     }
 
     $updatedSettingsJson = $settings | ConvertTo-Json -Depth 100 | Out-String
+    
+    if ($updatedSettingsJson -match '"guid":\s*\[') {
+        Write-Host "⚠️ Detected malformed GUID array in JSON. Fixing..." -ForegroundColor Yellow
+        $updatedSettingsJson = $updatedSettingsJson -replace '"guid":\s*\[[^\]]*\]', "`"guid`": `"$powerShellGUID`""
+    }
+    
     $updatedHash = [System.Security.Cryptography.HashAlgorithm]::Create("SHA256").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($updatedSettingsJson)) -join ""
 
     if ($originalHash -ne $updatedHash) {
@@ -94,6 +106,10 @@ if (Test-Path $terminalSettingsPath) {
 if (!(Test-Path $PROFILE)) {
   Write-Host "Creating PowerShell profile: $PROFILE" -ForegroundColor Green
   New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+} else {
+  $profileBackupPath = "$PROFILE.backup"
+  Copy-Item $PROFILE $profileBackupPath -Force
+  Write-Host "📋 Created PowerShell profile backup at: $profileBackupPath" -ForegroundColor Cyan
 }
 
 $ompConfig = @'
