@@ -30,11 +30,13 @@ if (Test-Path $terminalSettingsPath) {
     } catch {
         Write-Host "❌ ERROR: Failed to parse settings.json. It might be malformed." -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Yellow
+        Read-Host "Press Enter to exit..."
         exit 1
     }
 
     if (-not $settings.profiles -or -not $settings.profiles.list) {
         Write-Host "⚠️ No profiles found in Windows Terminal settings!" -ForegroundColor Yellow
+        Read-Host "Press Enter to exit..."
         exit 1
     }
 
@@ -72,6 +74,7 @@ if (Test-Path $terminalSettingsPath) {
         $settings | ConvertTo-Json -Depth 100 | ConvertFrom-Json | Out-Null
     } catch {
         Write-Host "❌ ERROR: JSON validation failed! Skipping save." -ForegroundColor Red
+        Read-Host "Press Enter to exit..."
         exit 1
     }
 
