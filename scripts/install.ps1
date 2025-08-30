@@ -16,11 +16,20 @@ $apps = @(
 
 foreach ($app in $apps) {
   Write-Host "📦 Installing $app..." -ForegroundColor Green
-  $installResult = winget install --id=$app --accept-source-agreements --accept-package-agreements
+  $installResult = winget install --id=$app --accept-source-agreements --accept-package-agreements 2>&1
+  
   if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Failed to install $app. Stopping script." -ForegroundColor Red
-    Read-Host "Press Enter to exit..."
-    exit 1
+    $outputString = $installResult -join "`n"
+    if ($outputString -match "No available upgrade found" -or $outputString -match "already installed" -or $outputString -match "No newer package versions") {
+      Write-Host "✅ $app is already up-to-date." -ForegroundColor Green
+    } else {
+      Write-Host "❌ Failed to install $app. Stopping script." -ForegroundColor Red
+      Write-Host "Error details: $outputString" -ForegroundColor Yellow
+      Read-Host "Press Enter to exit..."
+      exit 1
+    }
+  } else {
+    Write-Host "✅ $app installed successfully." -ForegroundColor Green
   }
 }
 
