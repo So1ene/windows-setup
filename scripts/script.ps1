@@ -1,4 +1,4 @@
-$envFile = "$PSScriptRoot\.env"
+$envFile = "$PSScriptRoot\..\.env"
 if (Test-Path $envFile) {
     Get-Content $envFile | ForEach-Object {
         if ($_ -match "^(.*?)=(.*)$") {
@@ -129,7 +129,7 @@ if (!(Test-Path $env:POSH_THEMES_PATH)) {
 
 $myThemeJson = @"
 {
-    "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+    "`$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
     "blocks": [
         {
             "type": "prompt",
