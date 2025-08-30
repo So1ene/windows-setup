@@ -9,6 +9,16 @@ if %errorLevel% NEQ 0 (
 echo Setting execution policy to allow scripts...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; Clear-Host"
 
+echo Checking if winget is available...
+winget --version >nul 2>&1
+if %errorLevel% NEQ 0 (
+    echo ERROR: Winget is not installed or not available.
+    echo Please install winget from the Microsoft Store ^(App Installer^) or download it from:
+    echo https://github.com/microsoft/winget-cli/releases
+    pause
+    exit /b 1
+)
+
 echo Installing the latest PowerShell...
 winget install --id Microsoft.Powershell --source winget --accept-source-agreements --accept-package-agreements
 
