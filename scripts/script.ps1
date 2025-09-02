@@ -11,6 +11,9 @@ if (Test-Path $envFile) {
 }
 
 Write-Host "Installing MesloLGS NF font using Oh My Posh..." -ForegroundColor Cyan
+
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
 try {
     oh-my-posh font install Meslo
     if ($LASTEXITCODE -ne 0) {
