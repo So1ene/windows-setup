@@ -11,7 +11,17 @@ if (Test-Path $envFile) {
 }
 
 Write-Host "Installing MesloLGS NF font using Oh My Posh..." -ForegroundColor Cyan
-oh-my-posh font install Meslo
+try {
+    oh-my-posh font install Meslo
+    if ($LASTEXITCODE -ne 0) {
+        throw "Font installation failed with exit code $LASTEXITCODE"
+    }
+    Write-Host "✅ MesloLGS NF font installed successfully." -ForegroundColor Green
+} catch {
+    Write-Host "⚠️ Font installation failed: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "You can install the font manually from: https://github.com/ryanoasis/nerd-fonts/releases" -ForegroundColor Yellow
+    Write-Host "Or try running 'oh-my-posh font install Meslo' manually later." -ForegroundColor Yellow
+}
 
 $terminalSettingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
 $desiredFontFace = "MesloLGLDZ Nerd Font"
