@@ -6,8 +6,7 @@ if %errorLevel% NEQ 0 (
     exit /b
 )
 
-echo Setting execution policy to allow scripts...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; Clear-Host"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy Restricted -Scope LocalMachine -Force -ErrorAction SilentlyContinue; Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force -ErrorAction SilentlyContinue" >nul 2>&1
 
 echo Checking if winget is available...
 winget --version >nul 2>&1

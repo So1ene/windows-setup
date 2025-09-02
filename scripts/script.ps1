@@ -81,7 +81,6 @@ if (Test-Path $terminalSettingsPath) {
             size = $desiredFontSize
         }
         startingDirectory = $defaultWorkingDirectory
-        source = "Windows.Terminal.PowershellCore"
     }
 
     $settings.profiles.list += $newProfile
